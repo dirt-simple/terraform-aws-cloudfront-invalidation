@@ -14,7 +14,7 @@ Caveats:
 ## Module Usage
 ```
 module "cloudfront_invalidation" {
-  source = "github.com/dirt-simple/tf/aws/cloudfront/invalidation"
+  source = "github.com/dirt-simple/terraform-aws-cloudfront-invalidation"
 }
 ```
 
