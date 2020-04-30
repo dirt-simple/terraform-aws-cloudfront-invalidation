@@ -16,6 +16,15 @@ variable "lambda_concurrent_executions" {
   default     = "1"
 }
 
+variable "lambda_timeout" {
+  description = "Lambda timeout"
+  default     = "3"
+}
+
+variable "lambda_memory_size" {
+  default = "128"
+}
+
 variable "invalidation_max_retries" {
   type = "string"
   description = "How may times to try to invalidate a path."
@@ -37,6 +46,13 @@ variable "sqs_receive_wait_time_seconds" {
   type = "string"
   default = "10"
 }
+
+// sqs visibility_timeout_seconds must be >= lambda fn timeout, aws reccomends at least 6 times the lambda
+// https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html#events-sqs-queueconfig
+variable "sqs_visibility_timeout_multiplier" {
+  default = 6
+}
+
 
 variable "sqs_batch_size" {
   type = "string"
@@ -97,6 +113,8 @@ resource "aws_lambda_function" "sqs_lambda" {
   source_code_hash               = "${data.archive_file.sqs_lambda.output_base64sha256}"
   runtime                        = "nodejs6.10"
   reserved_concurrent_executions = "${var.lambda_concurrent_executions}"
+  timeout                        = "${var.lambda_timeout}"
+  memory_size                    = "${var.lambda_memory_size}"
 
   environment {
     variables = {
@@ -191,6 +209,7 @@ resource "aws_sqs_queue" "sqs_queue" {
   name                      = "${var.name}"
   message_retention_seconds = "${var.sqs_message_retention_seconds}"
   receive_wait_time_seconds = "${var.sqs_receive_wait_time_seconds}"
+  visibility_timeout_seconds = "${var.lambda_timeout * var.sqs_visibility_timeout_multiplier}"
   tags                      = "${local.tags}"
 }
 
