@@ -21,6 +21,11 @@ variable "lambda_timeout" {
   default     = "3"
 }
 
+variable "lambda_runtime" {
+  description = "Lambda runtime. Default is nodejs12.x"
+  default     = "nodejs12.x"
+}
+
 variable "lambda_memory_size" {
   default = "128"
 }
@@ -111,7 +116,7 @@ resource "aws_lambda_function" "sqs_lambda" {
   role                           = "${aws_iam_role.sqs_lambda.arn}"
   handler                        = "index.handler"
   source_code_hash               = "${data.archive_file.sqs_lambda.output_base64sha256}"
-  runtime                        = "nodejs6.10"
+  runtime                        = "${var.lambda_runtime}"
   reserved_concurrent_executions = "${var.lambda_concurrent_executions}"
   timeout                        = "${var.lambda_timeout}"
   memory_size                    = "${var.lambda_memory_size}"
