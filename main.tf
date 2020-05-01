@@ -51,7 +51,7 @@ variable "log_retention_in_days" {
 }
 
 variable "tags" {
-  type        = "map"
+  type        = map(object({}))
   description = "A mapping of tags to assign to the resource"
   default     = {}
 }
