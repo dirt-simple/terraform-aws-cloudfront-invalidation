@@ -1,51 +1,72 @@
 variable "aws_region" {
-  type = string
+  type        = string
   description = "The AWS region"
   default     = "us-east-1"
 }
 
 variable "name" {
-  type = string
+  type        = string
   description = "This will be the name/prefix of all resources created"
   default     = "cloudfront-invalidation"
 }
 
 variable "lambda_concurrent_executions" {
-  type = string
+  type        = string
   description = "Max concurrent invalidation lambdas."
   default     = "1"
 }
 
+variable "lambda_timeout" {
+  description = "Lambda timeout"
+  default     = "3"
+}
+
+variable "lambda_runtime" {
+  description = "Lambda runtime. Default is nodejs12.x"
+  default     = "nodejs12.x"
+}
+
+variable "lambda_memory_size" {
+  default = "128"
+}
+
 variable "invalidation_max_retries" {
-  type = string
+  type        = string
   description = "How may times to try to invalidate a path."
   default     = "20"
 }
 
 variable "invalidation_retry_timeout" {
-  type = string
+  type        = string
   description = "How long to wait between retries. Max is 900"
   default     = "300"
 }
 
 variable "sqs_message_retention_seconds" {
-  type = string
+  type    = string
   default = "86400"
 }
 
 variable "sqs_receive_wait_time_seconds" {
-  type = string
+  type    = string
   default = "10"
 }
 
+// sqs visibility_timeout_seconds must be >= lambda fn timeout, aws reccomends at least 6 times the lambda
+// https://docs.aws.amazon.com/lambda/latest/dg/with-sqs.html#events-sqs-queueconfig
+variable "sqs_visibility_timeout_multiplier" {
+  default = 6
+}
+
+
 variable "sqs_batch_size" {
-  type = string
+  type        = string
   description = "10 is the max for SQS"
   default     = "10"
 }
 
 variable "log_retention_in_days" {
-  type = string
+  type        = string
   description = "the number of days you want to retain log events in the specified log group."
   default     = "3"
 }
@@ -95,9 +116,10 @@ resource "aws_lambda_function" "sqs_lambda" {
   role                           = aws_iam_role.sqs_lambda.arn
   handler                        = "index.handler"
   source_code_hash               = data.archive_file.sqs_lambda.output_base64sha256
-  runtime                        = "nodejs6.10"
+  runtime                        = var.lambda_runtime
   reserved_concurrent_executions = var.lambda_concurrent_executions
-
+  timeout                        = var.lambda_timeout
+  memory_size                    = var.lambda_memory_size
   environment {
     variables = {
       INVALIDATION_MAX_RETRIES  = var.invalidation_max_retries
@@ -188,10 +210,11 @@ resource "aws_sns_topic" "sns_topic" {
 }
 
 resource "aws_sqs_queue" "sqs_queue" {
-  name                      = var.name
-  message_retention_seconds = var.sqs_message_retention_seconds
-  receive_wait_time_seconds = var.sqs_receive_wait_time_seconds
-  tags                      = local.tags
+  name                       = var.name
+  message_retention_seconds  = var.sqs_message_retention_seconds
+  receive_wait_time_seconds  = var.sqs_receive_wait_time_seconds
+  visibility_timeout_seconds = var.lambda_timeout * var.sqs_visibility_timeout_multiplier
+  tags                       = local.tags
 }
 
 resource "aws_sns_topic_subscription" "sqs_subscribe" {
