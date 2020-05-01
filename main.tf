@@ -57,11 +57,11 @@ variable "tags" {
 }
 
 locals {
-  tags = "${merge(var.tags, map("terraform-module", "github.com/dirt-simple/tf/infrastructure/cloudfront/invalidation"))}"
+  tags = merge(var.tags, map("terraform-module", "github.com/dirt-simple/tf/infrastructure/cloudfront/invalidation"))
 }
 
 provider "aws" {
-  region = "${var.aws_region}"
+  region = var.aws_region
 }
 
 # Reusable policy document
@@ -91,33 +91,33 @@ data "archive_file" "sqs_lambda" {
 
 resource "aws_lambda_function" "sqs_lambda" {
   filename                       = "${path.module}/lambda_function.zip"
-  function_name                  = "${var.name}"
-  role                           = "${aws_iam_role.sqs_lambda.arn}"
+  function_name                  = var.name
+  role                           = aws_iam_role.sqs_lambda.arn
   handler                        = "index.handler"
-  source_code_hash               = "${data.archive_file.sqs_lambda.output_base64sha256}"
+  source_code_hash               = data.archive_file.sqs_lambda.output_base64sha256
   runtime                        = "nodejs6.10"
-  reserved_concurrent_executions = "${var.lambda_concurrent_executions}"
+  reserved_concurrent_executions = var.lambda_concurrent_executions
 
   environment {
     variables = {
-      INVALIDATION_MAX_RETRIES  = "${var.invalidation_max_retries}"
-      INVALIDATION_RETRY_TIMOUT = "${var.invalidation_retry_timeout}"
+      INVALIDATION_MAX_RETRIES  = var.invalidation_max_retries
+      INVALIDATION_RETRY_TIMOUT = var.invalidation_retry_timeout
     }
   }
 
-  tags = "${local.tags}"
+  tags = local.tags
 }
 
 resource "aws_cloudwatch_log_group" "sqs_lambda" {
   name              = "/aws/lambda/${var.name}"
-  retention_in_days = "${var.log_retention_in_days}"
-  tags              = "${local.tags}"
+  retention_in_days = var.log_retention_in_days
+  tags              = local.tags
 }
 
 resource "aws_iam_role" "sqs_lambda" {
-  name               = "${var.name}"
-  assume_role_policy = "${data.aws_iam_policy_document.lambda_assume_role.json}"
-  tags               = "${local.tags}"
+  name               = var.name
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
+  tags               = local.tags
 }
 
 data "aws_iam_policy_document" "sqs_lambda" {
@@ -148,7 +148,7 @@ data "aws_iam_policy_document" "sqs_lambda" {
     ]
 
     resources = [
-      "${aws_sqs_queue.sqs_queue.arn}",
+      aws_sqs_queue.sqs_queue.arn,
     ]
   }
 
@@ -179,37 +179,37 @@ data "aws_iam_policy_document" "sqs_lambda" {
 
 resource "aws_iam_role_policy" "sqs_lambda" {
   name   = "generated-policy"
-  role   = "${aws_iam_role.sqs_lambda.name}"
-  policy = "${data.aws_iam_policy_document.sqs_lambda.json}"
+  role   = aws_iam_role.sqs_lambda.name
+  policy = data.aws_iam_policy_document.sqs_lambda.json
 }
 
 resource "aws_sns_topic" "sns_topic" {
-  name = "${var.name}"
+  name = var.name
 }
 
 resource "aws_sqs_queue" "sqs_queue" {
-  name                      = "${var.name}"
-  message_retention_seconds = "${var.sqs_message_retention_seconds}"
-  receive_wait_time_seconds = "${var.sqs_receive_wait_time_seconds}"
-  tags                      = "${local.tags}"
+  name                      = var.name
+  message_retention_seconds = var.sqs_message_retention_seconds
+  receive_wait_time_seconds = var.sqs_receive_wait_time_seconds
+  tags                      = local.tags
 }
 
 resource "aws_sns_topic_subscription" "sqs_subscribe" {
-  topic_arn = "${aws_sns_topic.sns_topic.arn}"
-  endpoint  = "${aws_sqs_queue.sqs_queue.arn}"
+  topic_arn = aws_sns_topic.sns_topic.arn
+  endpoint  = aws_sqs_queue.sqs_queue.arn
   protocol  = "sqs"
 }
 
 resource "aws_lambda_event_source_mapping" "sqs_worker" {
   enabled          = true
-  batch_size       = "${var.sqs_batch_size}"
-  event_source_arn = "${aws_sqs_queue.sqs_queue.arn}"
-  function_name    = "${aws_lambda_function.sqs_lambda.arn}"
+  batch_size       = var.sqs_batch_size
+  event_source_arn = aws_sqs_queue.sqs_queue.arn
+  function_name    = aws_lambda_function.sqs_lambda.arn
 }
 
 resource "aws_sqs_queue_policy" "sqs_queue" {
-  queue_url = "${aws_sqs_queue.sqs_queue.id}"
-  policy    = "${data.aws_iam_policy_document.sqs_queue.json}"
+  queue_url = aws_sqs_queue.sqs_queue.id
+  policy    = data.aws_iam_policy_document.sqs_queue.json
 }
 
 data "aws_iam_policy_document" "sqs_queue" {
@@ -225,8 +225,8 @@ data "aws_iam_policy_document" "sqs_queue" {
       variable = "aws:SourceArn"
 
       values = [
-        "${aws_sns_topic.sns_topic.arn}",
-        "${aws_lambda_function.sqs_lambda.arn}",
+        aws_sns_topic.sns_topic.arn,
+        aws_lambda_function.sqs_lambda.arn,
       ]
     }
 
@@ -241,15 +241,15 @@ data "aws_iam_policy_document" "sqs_queue" {
     }
 
     resources = [
-      "${aws_sqs_queue.sqs_queue.arn}",
+      aws_sqs_queue.sqs_queue.arn,
     ]
   }
 }
 
 output "sns-topic-arn" {
-  value = "${aws_sns_topic.sns_topic.arn}"
+  value = aws_sns_topic.sns_topic.arn
 }
 
 output "sns-topic-id" {
-  value = "${aws_sns_topic.sns_topic.id}"
+  value = aws_sns_topic.sns_topic.id
 }
