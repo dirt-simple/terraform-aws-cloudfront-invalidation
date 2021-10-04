@@ -1,17 +1,17 @@
 variable "aws_region" {
-  type = "string"
+  type = string
   description = "The AWS region"
   default     = "us-east-1"
 }
 
 variable "name" {
-  type = "string"
+  type = string
   description = "This will be the name/prefix of all resources created"
   default     = "cloudfront-invalidation"
 }
 
 variable "lambda_concurrent_executions" {
-  type = "string"
+  type = string
   description = "Max concurrent invalidation lambdas."
   default     = "1"
 }
@@ -31,24 +31,24 @@ variable "lambda_memory_size" {
 }
 
 variable "invalidation_max_retries" {
-  type = "string"
+  type = string
   description = "How may times to try to invalidate a path."
   default     = "20"
 }
 
 variable "invalidation_retry_timeout" {
-  type = "string"
+  type = string
   description = "How long to wait between retries. Max is 900"
   default     = "300"
 }
 
 variable "sqs_message_retention_seconds" {
-  type = "string"
+  type = string
   default = "86400"
 }
 
 variable "sqs_receive_wait_time_seconds" {
-  type = "string"
+  type = string
   default = "10"
 }
 
@@ -60,25 +60,25 @@ variable "sqs_visibility_timeout_multiplier" {
 
 
 variable "sqs_batch_size" {
-  type = "string"
+  type = string
   description = "10 is the max for SQS"
   default     = "10"
 }
 
 variable "log_retention_in_days" {
-  type = "string"
+  type = string
   description = "the number of days you want to retain log events in the specified log group."
   default     = "3"
 }
 
 variable "tags" {
-  type        = "map"
+  type        = map(string)
   description = "A mapping of tags to assign to the resource"
   default     = {}
 }
 
 locals {
-  tags = "${merge(var.tags, map("terraform-module", "github.com/dirt-simple/tf/infrastructure/cloudfront/invalidation"))}"
+  tags = "${merge(var.tags, tomap({"terraform-module" = "github.com/dirt-simple/tf/infrastructure/cloudfront/invalidation"}))}"
 }
 
 provider "aws" {
